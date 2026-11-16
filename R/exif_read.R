@@ -309,6 +309,19 @@ construct_argfile <- function(args, path) {
                        paste0("#[CSTR]", gsub("\n", "\\\\n", args)),
                        args)
     }
+    ## Each path is one line of the argument file, where ExifTool reads a
+    ## line starting with "-" as an option, skips one starting with "#",
+    ## and strips white space at the start. "./" keeps such a path a path.
+    ## A line break would split a path in two, so such a path is written
+    ## as a C string, as for args above.
+    lead <- grepl("^[-#[:space:]]", path)
+    path[lead] <- paste0("./", path[lead])
+    if (any(nl <- grepl("[\r\n]", path))) {
+        esc <- gsub("\\", "\\\\", path[nl], fixed = TRUE)
+        esc <- gsub("\n", "\\n", esc, fixed = TRUE)
+        esc <- gsub("\r", "\\r", esc, fixed = TRUE)
+        path[nl] <- paste0("#[CSTR]", esc)
+    }
     all_args <- c(args, path)
     tmpfile <- tempfile("args.cmd")
     write_utf8(all_args, tmpfile)
